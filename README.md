@@ -1,6 +1,6 @@
 # python-quickjs-runtime
 
-A lightweight, high-performance Python binding for the [QuickJS](https://bellard.org/quickjs/) Javascript Engine.
+A lightweight Python binding for the [QuickJS](https://bellard.org/quickjs/) Javascript Engine.
 
 This library allows you to execute JavaScript code within your Python applications, providing seamless interoperability between Python and JavaScript.
 
