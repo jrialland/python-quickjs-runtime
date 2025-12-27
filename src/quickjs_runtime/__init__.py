@@ -1,5 +1,6 @@
 from _quickjs import Context as _Context
 import sys
+from .require import Require
 
 class Context:
     """

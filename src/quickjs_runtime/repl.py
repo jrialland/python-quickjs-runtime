@@ -1,8 +1,10 @@
 import sys
 from . import Context
+from .require import Require
 
 def main():
     ctx = Context()
+    Require(ctx, ".")
     
     print("QuickJS REPL")
     eof_key = "Ctrl+Z" if sys.platform == "win32" else "Ctrl+D"
