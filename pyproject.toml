@@ -11,5 +11,9 @@ requires-python = ">=3.8"
 license = {text = "MIT"}
 dependencies = []
 
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+
+
 [tool.zigcc-build]
 configurer-script = "configure.py"

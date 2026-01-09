@@ -1,68 +1,90 @@
-from _quickjs import Context as _Context
-import sys
-from .require import Require
+from _quickjs import Runtime as _Runtime
 
-class Context:
-    """
-    A QuickJS Context wrapper.
-    """
-    def __init__(self, with_console: bool = True):
-        self._ctx = _Context()
-        if with_console:
-            self._setup_console()
+"""
+    {"set_runtime_info", (PyCFunction)Runtime_SetRuntimeInfo, METH_O, "Set runtime info"},
+    {"set_memory_limit", (PyCFunction)Runtime_SetMemoryLimit, METH_O, "Set memory limit"},
+    {"set_gc_threshold", (PyCFunction)Runtime_SetGCThreshold, METH_O, "Set GC threshold"},
+    {"set_max_stack_size", (PyCFunction)Runtime_SetMaxStackSize, METH_O, "Set max stack size"},
+    {"update_stack_top", (PyCFunction)Runtime_UpdateStackTop, METH_NOARGS, "Update stack top"},
+    {"run_gc", (PyCFunction)Runtime_RunGC, METH_NOARGS, "Run garbage collector"},
+    {"new_context", (PyCFunction)Runtime_NewContext, METH_NOARGS, "Create a new QuickJS Context"},
 
-    def _setup_console(self):
-        def log(*args):
-            print(*args)
-        
-        def error(*args):
-            print(*args, file=sys.stderr)
+"""
+from abc import ABC, abstractmethod
+from typing import override
 
-        self.set("__py_log", log)
-        self.set("__py_error", error)
-        
-        self.eval("""
-            (function() {
-                var log = __py_log;
-                var error = __py_error;
-                globalThis.console = {
-                    log: function(...args) { log(...args); },
-                    error: function(...args) { error(...args); },
-                    warn: function(...args) { error(...args); },
-                    info: function(...args) { log(...args); }
-                };
-            })();
-        """)
-        # Clean up globals
-        self.eval("delete globalThis.__py_log; delete globalThis.__py_error;")
+class IRuntime(ABC):
 
-    def eval(self, code: str, filename: str = "<input>"):
-        """
-        Evaluate JavaScript code and return the result.
-        
-        :param code: The JavaScript code to evaluate.
-        :param filename: The filename to use for stack traces (optional).
-        :return: The result of the evaluation (int, float, str, bool, None).
-        :raises RuntimeError: If the JavaScript code throws an exception.
-        """
-        return self._ctx.eval(code, filename)
+    @abstractmethod
+    def set_runtime_info(self, info: str) -> None:
+        ...
+    
+    @abstractmethod
+    def set_memory_limit(self, limit: int) -> None:
+        ...
+    
+    @abstractmethod
+    def set_gc_threshold(self, threshold: int) -> None:
+        ...
+    
+    @abstractmethod
+    def set_max_stack_size(self, size: int) -> None:
+        ...
+    
+    @abstractmethod
+    def update_stack_top(self) -> None:
+        ...
+    
+    @abstractmethod
+    def run_gc(self) -> None:
+        ...
 
-    def eval_file(self, path: str):
-        """
-        Evaluate a JavaScript file.
-        
-        :param path: The path to the file to evaluate.
-        :return: The result of the evaluation.
-        """
-        with open(path, "r", encoding="utf-8") as f:
-            code = f.read()
-        return self.eval(code, filename=path)
+    @abstractmethod
+    def new_context(self) -> "IContext":
+        ...
 
-    def set(self, name: str, value):
-        """
-        Set a global variable in the JavaScript context.
-        
-        :param name: The name of the variable.
-        :param value: The value to set (int, float, str, bool, None, or callable).
-        """
-        self._ctx.set(name, value)
+class IContext(ABC):
+    @abstractmethod
+    def eval(self, code: str, filename: str = "input.js") -> any:
+        ...
+
+    @abstractmethod
+    def set(self, name: str, value: any) -> None:
+        ...
+
+
+class Runtime(IRuntime, _Runtime):
+
+    def __init__(self) -> None:
+        _Runtime.__init__(self)
+
+    @override
+    def set_runtime_info(self, info: str) -> None:
+        return _Runtime.set_runtime_info(self, info)
+    
+    @override
+    def set_memory_limit(self, limit: int) -> None:
+        return _Runtime.set_memory_limit(self, limit)
+    
+    @override
+    def set_gc_threshold(self, threshold: int) -> None:
+        return _Runtime.set_gc_threshold(self, threshold)
+    
+    @override
+    def set_max_stack_size(self, size: int) -> None:
+        return _Runtime.set_max_stack_size(self, size)
+    
+    @override
+    def update_stack_top(self) -> None:
+        return _Runtime.update_stack_top(self)
+    
+    @override
+    def run_gc(self) -> None:
+        return _Runtime.run_gc(self)
+    
+    @override
+    def new_context(self) -> "IContext":
+        return _Runtime.new_context(self)
+
+
+__all__ = ["Runtime"]
