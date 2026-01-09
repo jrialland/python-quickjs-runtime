@@ -204,3 +204,26 @@ def test_runtime_from_context():
     ctx = rt.new_context()
     rt_from_ctx = ctx.get_runtime()
     assert rt_from_ctx is rt
+
+def test_bigint_handling():
+    rt = Runtime()
+    ctx = rt.new_context()
+
+    # Test setting and getting a bigint
+    big_value = 1234567890123456789012345678901234567890
+    ctx.set("big", big_value)
+    assert ctx.eval("typeof big") == "bigint"
+    result = ctx.eval("big + 1n")
+    assert result == big_value + 1
+
+    # Test evaluating a bigint literal
+    result = ctx.eval("1234567890123456789012345678901234567890n + 2n")
+    assert result == big_value + 2
+    assert isinstance(result, int)
+
+    # Test small bigint (fits in 64-bit)
+    small_big = 9007199254740992 # MAX_SAFE_INTEGER + 1
+    ctx.set("sb", small_big)
+    assert ctx.eval("typeof sb") == "bigint"
+    assert ctx.eval("sb") == small_big
+    assert isinstance(ctx.eval("sb"), int)

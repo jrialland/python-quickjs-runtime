@@ -188,6 +188,16 @@ static PyObject *js_value_to_py(JSContext *ctx, JSValue val)
         return PyBool_FromLong(JS_VALUE_GET_BOOL(val));
     case JS_TAG_FLOAT64:
         return PyFloat_FromDouble(JS_VALUE_GET_FLOAT64(val));
+    case JS_TAG_BIG_INT:
+    case JS_TAG_SHORT_BIG_INT:
+    {
+        const char *str = JS_ToCString(ctx, val);
+        if (!str)
+            return NULL;
+        PyObject *py_val = PyLong_FromString(str, NULL, 10);
+        JS_FreeCString(ctx, str);
+        return py_val;
+    }
     case JS_TAG_STRING:
     {
         const char *str = JS_ToCString(ctx, val);
@@ -296,13 +306,40 @@ static JSValue py_to_js_value(JSContext *ctx, PyObject *obj)
         return JS_NewBool(ctx, obj == Py_True);
     if (PyLong_Check(obj))
     {
-        long v = PyLong_AsLong(obj);
-        if (PyErr_Occurred())
+        int overflow;
+        long long v = PyLong_AsLongLongAndOverflow(obj, &overflow);
+        if (!overflow)
         {
-            PyErr_Clear();
-            return JS_NewFloat64(ctx, PyLong_AsDouble(obj));
+            if (v >= INT32_MIN && v <= INT32_MAX)
+            {
+                return JS_NewInt32(ctx, (int32_t)v);
+            }
+            // Check for safe integer range for Number (53 bits)
+            if (v >= -9007199254740991LL && v <= 9007199254740991LL)
+            {
+                return JS_NewFloat64(ctx, (double)v);
+            }
+            return JS_NewBigInt64(ctx, v);
         }
-        return JS_NewInt32(ctx, (int32_t)v);
+        PyErr_Clear();
+
+        // Too big for long long, convert via string to BigInt
+        PyObject *py_str = PyObject_Str(obj);
+        if (!py_str)
+            return JS_EXCEPTION;
+        const char *str = PyUnicode_AsUTF8(py_str);
+
+        JSValue global = JS_GetGlobalObject(ctx);
+        JSValue bigint_ctor = JS_GetPropertyStr(ctx, global, "BigInt");
+        JS_FreeValue(ctx, global);
+
+        JSValue str_val = JS_NewString(ctx, str);
+        JSValue result = JS_Call(ctx, bigint_ctor, JS_UNDEFINED, 1, &str_val);
+
+        JS_FreeValue(ctx, str_val);
+        JS_FreeValue(ctx, bigint_ctor);
+        Py_DECREF(py_str);
+        return result;
     }
     if (PyFloat_Check(obj))
         return JS_NewFloat64(ctx, PyFloat_AsDouble(obj));
@@ -412,6 +449,10 @@ static PyObject *Context_Set(Context *self, PyObject *args)
         return NULL;
 
     JSValue js_val = py_to_js_value(self->ctx, value);
+    if (JS_IsException(js_val))
+    {
+        return js_value_to_py(self->ctx, JS_EXCEPTION);
+    }
     JSValue global = JS_GetGlobalObject(self->ctx);
     JS_SetPropertyStr(self->ctx, global, name, js_val);
     JS_FreeValue(self->ctx, global);
