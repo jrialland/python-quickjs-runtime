@@ -43,13 +43,22 @@ class IRuntime(ABC):
     def new_context(self) -> "IContext":
         ...
 
-class IContext(ABC):
+class Context(ABC):
+
     @abstractmethod
     def eval(self, code: str, filename: str = "input.js") -> any:
         ...
 
     @abstractmethod
+    def eval_sync(self, code: str, filename: str = "input.js") -> any:
+        ...
+
+    @abstractmethod
     def set(self, name: str, value: any) -> None:
+        ...
+
+    @abstractmethod
+    def get_runtime(self) -> IRuntime:
         ...
 
 
@@ -83,8 +92,9 @@ class Runtime(IRuntime, _Runtime):
         return _Runtime.run_gc(self)
     
     @override
-    def new_context(self) -> "IContext":
-        return _Runtime.new_context(self)
+    def new_context(self) -> Context:
+        ctx = _Runtime.new_context(self)
+        return ctx
 
 
-__all__ = ["Runtime"]
+__all__ = ["Runtime", "Context"]

@@ -42,9 +42,10 @@ typedef struct
 static PyTypeObject ContextType;
 static PyObject *Context_new(PyTypeObject *type, PyObject *args, PyObject *kwds);
 static void Context_dealloc(Context *self);
-static PyObject *Context_Eval(Context *self, PyObject *args);
+static PyObject *Context_Eval(Context *self, PyObject *args, PyObject *kwargs);
+static PyObject *Context_EvalSync(Context *self, PyObject *args, PyObject *kwargs);
 static PyObject *Context_Set(Context *self, PyObject *args);
-
+static PyObject * Context_GetRuntime(Context *self, PyObject *Py_UNUSED(ignored));
 static JSValue py_to_js_value(JSContext *ctx, PyObject *obj);
 static JSValue py_callable_handler(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv, int magic, JSValue *func_data);
 
@@ -255,7 +256,12 @@ static PyObject *js_value_to_py(JSContext *ctx, JSValue val)
     case JS_TAG_EXCEPTION:
     {
         JSValue exc = JS_GetException(ctx);
-        const char *str = JS_ToCString(ctx, exc);
+        JSValue val = JS_GetPropertyStr(ctx, exc, "stack");
+        if (JS_IsUndefined(val))
+        {
+            val = JS_DupValue(ctx, exc);
+        }
+        const char *str = JS_ToCString(ctx, val);
         if (str)
         {
             PyErr_SetString(PyExc_RuntimeError, str);
@@ -265,6 +271,7 @@ static PyObject *js_value_to_py(JSContext *ctx, JSValue val)
         {
             PyErr_SetString(PyExc_RuntimeError, "Unknown QuickJS exception");
         }
+        JS_FreeValue(ctx, val);
         JS_FreeValue(ctx, exc);
         return NULL;
     }
@@ -411,11 +418,12 @@ static PyObject *Context_Set(Context *self, PyObject *args)
     Py_RETURN_NONE;
 }
 
-static PyObject *Context_Eval(Context *self, PyObject *args)
+static PyObject *Context_Eval(Context *self, PyObject *args, PyObject *kwargs)
 {
+    static char *kwlist[] = {"code", "filename", NULL};
     const char *code;
     const char *filename = "input.js";
-    if (!PyArg_ParseTuple(args, "s|s", &code, &filename))
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s|s", kwlist, &code, &filename))
     {
         return NULL;
     }
@@ -424,6 +432,43 @@ static PyObject *Context_Eval(Context *self, PyObject *args)
     PyObject *result = js_value_to_py(self->ctx, val);
     JS_FreeValue(self->ctx, val);
     return result;
+}
+
+static PyObject *Context_EvalSync(Context *self, PyObject *args, PyObject *kwargs)
+{
+    static char *kwlist[] = {"code", "filename", NULL};
+    const char *code;
+    const char *filename = "input.js";
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s|s", kwlist, &code, &filename))
+    {
+        return NULL;
+    }
+
+    JSValue val = JS_Eval(self->ctx, code, strlen(code), filename, JS_EVAL_TYPE_GLOBAL);
+
+    // Run the job queue until empty
+    JSContext *ctx1;
+    int err;
+    while (JS_IsJobPending(self->runtime->rt))
+    {
+        err = JS_ExecutePendingJob(self->runtime->rt, &ctx1);
+        if (err < 0)
+        {
+            JS_FreeValue(self->ctx, val);
+            // js_value_to_py with JS_EXCEPTION will set the Python error
+            return js_value_to_py(self->ctx, JS_EXCEPTION);
+        }
+    }
+
+    PyObject *result = js_value_to_py(self->ctx, val);
+    JS_FreeValue(self->ctx, val);
+    return result;
+}
+
+static PyObject * Context_GetRuntime(Context *self, PyObject *Py_UNUSED(ignored))
+{
+    Py_INCREF(self->runtime);
+    return (PyObject *)self->runtime;
 }
 
 static PyObject *Context_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
@@ -441,8 +486,10 @@ static void Context_dealloc(Context *self)
 }
 
 static PyMethodDef Context_methods[] = {
-    {"eval", (PyCFunction)Context_Eval, METH_VARARGS, "Evaluate JavaScript code"},
+    {"eval", (PyCFunction)Context_Eval, METH_VARARGS | METH_KEYWORDS, "Evaluate JavaScript code"},
+    {"eval_sync", (PyCFunction)Context_EvalSync, METH_VARARGS | METH_KEYWORDS, "Evaluate JavaScript code and run pending jobs"},
     {"set", (PyCFunction)Context_Set, METH_VARARGS, "Set a global value"},
+    {"get_runtime", (PyCFunction)Context_GetRuntime, METH_NOARGS, "Get the Runtime associated with this Context"},
     {NULL} /* Sentinel */
 };
 

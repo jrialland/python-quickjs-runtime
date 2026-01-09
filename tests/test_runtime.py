@@ -144,3 +144,63 @@ def test_nested_collections():
 
     res = ctx.eval("({a: [1, 2], b: {c: 3}})")
     assert res == {"a": [1, 2], "b": {"c": 3}}
+
+
+def test_eval_sync():
+    rt = Runtime()
+    ctx = rt.new_context()
+
+    # Test resolving a promise
+    script = """
+    var out = 0;
+    async function test() {
+        out = await Promise.resolve(100);
+    }
+    test();
+    out;
+    """
+    # eval() will return 0 because it doesn't wait for the promise
+    assert ctx.eval(script) == 0
+
+    # eval_sync() will wait for the job queue to be empty
+    script = """
+    var out_async = 0;
+    async function test_async() {
+        out_async = await Promise.resolve(200);
+    }
+    test_async();
+    out_async;
+    """
+    # Note: the return value of the script is still eval'd before the loop, 
+    # but we want to check if the side effect (out_async = 200) happened.
+    ctx.eval_sync(script)
+    assert ctx.eval("out_async") == 200
+
+
+def test_eval_filename():
+    rt = Runtime()
+    ctx = rt.new_context()
+
+    # Verify positional filename
+    try:
+        ctx.eval("syntax error", "custom_pos.js")
+    except RuntimeError as e:
+        assert "custom_pos.js" in str(e)
+
+    # Verify keyword filename
+    try:
+        ctx.eval(code="syntax error", filename="custom_kw.js")
+    except RuntimeError as e:
+        assert "custom_kw.js" in str(e)
+
+    # Verify eval_sync keyword filename
+    try:
+        ctx.eval_sync(code="syntax error", filename="custom_sync_kw.js")
+    except RuntimeError as e:
+        assert "custom_sync_kw.js" in str(e)
+
+def test_runtime_from_context():
+    rt = Runtime()
+    ctx = rt.new_context()
+    rt_from_ctx = ctx.get_runtime()
+    assert rt_from_ctx is rt
