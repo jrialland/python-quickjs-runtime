@@ -1,9 +1,10 @@
 import sys
-from . import Context
+from . import Runtime
 from .require import Require
 
 def main():
-    ctx = Context()
+    rt = Runtime()
+    ctx = rt.new_context()
     Require(ctx, ".")
     
     print("QuickJS REPL")

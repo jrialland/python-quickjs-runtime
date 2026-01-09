@@ -6,10 +6,10 @@ This library allows you to execute JavaScript code within your Python applicatio
 
 ## Features
 
-*   **Evaluate JavaScript**: Run JS code strings or files directly from Python.
-*   **Data Exchange**: Pass `int`, `float`, `str`, `bool`, and `None` between Python and JS.
+*   **Evaluate JavaScript**: Run JS code strings directly from Python.
+*   **ES2023 Support**: Support for modern JS features including `async/await`.
+*   **Data Exchange**: Pass `int`, `float`, `str`, `bool`, `list`, `dict`, and `BigInt` between Python and JS.
 *   **Python Callbacks**: Call Python functions directly from JavaScript.
-*   **Console Support**: Built-in `console.log`, `console.error`, etc., mapped to Python's stdout/stderr.
 *   **REPL**: Includes a simple interactive shell for testing JS snippets.
 *   **Easy Build**: Uses `zigcc-build` for reliable cross-platform compilation.
 
@@ -26,9 +26,10 @@ pip install .
 ### Basic Evaluation
 
 ```python
-from quickjs_runtime import Context
+from quickjs_runtime import Runtime
 
-ctx = Context()
+rt = Runtime()
+ctx = rt.new_context()
 
 # Evaluate simple expressions
 result = ctx.eval("1 + 2")
@@ -44,7 +45,10 @@ print(greeting)  # "Hello World"
 You can set global variables in the JavaScript context and retrieve results.
 
 ```python
-ctx = Context()
+from quickjs_runtime import Runtime
+
+rt = Runtime()
+ctx = rt.new_context()
 
 # Set variables
 ctx.set("x", 10)
@@ -60,10 +64,13 @@ print(result)  # 200
 You can pass Python functions to the JavaScript context.
 
 ```python
+from quickjs_runtime import Runtime
+
 def add(a, b):
     return a + b
 
-ctx = Context()
+rt = Runtime()
+ctx = rt.new_context()
 ctx.set("py_add", add)
 
 # Call the Python function from JS
@@ -71,22 +78,41 @@ result = ctx.eval("py_add(5, 7)")
 print(result)  # 12
 ```
 
-### Evaluating Files
+### Custom Filenames and Stack Traces
+
+You can provide a filename to `eval` for better error messages.
 
 ```python
-ctx = Context()
-# Assuming 'script.js' exists
-result = ctx.eval_file("script.js")
+from quickjs_runtime import Runtime
+
+rt = Runtime()
+ctx = rt.new_context()
+
+try:
+    ctx.eval("throw new Error('oops')", filename="my_script.js")
+except RuntimeError as e:
+    print(e)  # error message containing 'my_script.js'
 ```
 
-### Console Output
+### Async/Await Support
 
-The `console` object is available in the JS context and redirects to Python's standard output/error.
+Wait for Promises to settle using `eval_sync`.
 
 ```python
-ctx = Context()
-ctx.eval("console.log('This goes to stdout')")
-ctx.eval("console.error('This goes to stderr')")
+from quickjs_runtime import Runtime
+
+rt = Runtime()
+ctx = rt.new_context()
+
+script = """
+async function fetchData() {
+    return "done";
+}
+fetchData();
+"""
+
+# eval_sync will run the job queue until all promises are settled
+ctx.eval_sync(script) 
 ```
 
 ## REPL
