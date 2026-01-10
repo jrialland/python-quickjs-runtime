@@ -10,13 +10,7 @@ def main():
     print("QuickJS REPL")
     eof_key = "Ctrl+Z" if sys.platform == "win32" else "Ctrl+D"
     print(f"Type 'exit()' or {eof_key} to exit")
-    
-    console = {
-        "log": print,
-    }
-    ctx.set("console", console)
-    ctx.eval("""globalThis.console = console;""")
-    
+
     while True:
         try:
             line = input("> ")
@@ -32,8 +26,8 @@ def main():
             print()
             break
         except KeyboardInterrupt:
-            print("\nKeyboardInterrupt")
-            continue
+            print()
+            break
 
 if __name__ == "__main__":
     main()
