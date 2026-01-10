@@ -1,3 +1,4 @@
+import sys
 from quickjs_runtime import Runtime
 
 
@@ -227,3 +228,34 @@ def test_bigint_handling():
     assert ctx.eval("typeof sb") == "bigint"
     assert ctx.eval("sb") == small_big
     assert isinstance(ctx.eval("sb"), int)
+
+def test_console():
+    rt = Runtime()
+    ctx = rt.new_context()
+    # Should not raise
+    ctx.eval("console.log('test')")
+    ctx.eval("console.error('test error')")
+    assert ctx.eval("typeof console.log") == "function"
+
+def test_globalThis():
+    rt = Runtime()
+    ctx = rt.new_context()
+    ctx.eval("globalThis.testValue = 123;")
+    assert ctx.eval("testValue") == 123
+
+def test_console_log():
+    rt = Runtime()
+    ctx = rt.new_context()
+
+    captured_stdout = []
+    captured_stderr = []
+
+    console = {
+        "log": lambda *args: captured_stdout.append(" ".join(map(str, args))),
+        "error": lambda *args: captured_stderr.append(" ".join(map(str, args))),
+    }
+    ctx.set("console", console)
+    ctx.eval("console.log('Hello', 'world!');")
+    ctx.eval("console.error('An', 'error', 'occurred');")
+    assert captured_stdout == ["Hello world!"]
+    assert captured_stderr == ["An error occurred"]

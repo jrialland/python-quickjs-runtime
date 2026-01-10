@@ -1,4 +1,5 @@
 from _quickjs import Runtime as _Runtime
+import sys
 
 """
     {"set_runtime_info", (PyCFunction)Runtime_SetRuntimeInfo, METH_O, "Set runtime info"},
@@ -94,6 +95,16 @@ class Runtime(IRuntime, _Runtime):
     @override
     def new_context(self) -> Context:
         ctx = _Runtime.new_context(self)
+        
+        # Setup console object
+        console = {
+            "log": lambda *args: print(*args),
+            "info": lambda *args: print(*args),
+            "warn": lambda *args: print(*args),
+            "error": lambda *args: print(*args, file=sys.stderr),
+        }
+        ctx.set("console", console)
+        
         return ctx
 
 
