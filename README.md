@@ -1,3 +1,5 @@
+![Tests](https://github.com/jrialland/python-quickjs-runtime/actions/workflows/test.yml/badge.svg)
+
 # python-quickjs-runtime
 
 A lightweight Python binding for the [QuickJS](https://bellard.org/quickjs/) Javascript Engine.
