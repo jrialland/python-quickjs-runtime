@@ -1,15 +1,40 @@
 [build-system]
-requires = ["zigcc-build"]
+requires = ["zigcc-build>=0.2.2"]
 build-backend = "zigcc_build"
 
 [project]
 name = "quickjs-runtime"
-version = "0.1.7"
+version = "0.2.0"
 description = "Python bindings for QuickJS"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.12, <3.15"
 license = {text = "MIT"}
 dependencies = []
+authors = [
+    {name = "Julien Rialland", email = "julien.rialland@gmail.com"}
+]
+maintainers = [
+    {name = "Julien Rialland", email = "julien.rialland@gmail.com"}
+]
+keywords = ["quickjs", "javascript", "js", "runtime", "bindings", "interpreter"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: JavaScript",
+    "Topic :: Software Development :: Interpreters",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+[project.urls]
+Homepage = "https://github.com/jrialland/python-quickjs-runtime"
+Repository = "https://github.com/jrialland/python-quickjs-runtime"
+Issues = "https://github.com/jrialland/python-quickjs-runtime/issues"
+Documentation = "https://github.com/jrialland/python-quickjs-runtime#readme"
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
@@ -17,3 +42,25 @@ pythonpath = ["src"]
 
 [tool.zigcc-build]
 configurer-script = "configure.py"
+
+
+[tool.cibuildwheel]
+# Build for Python 3.12, 3.13, 3.14
+build = ["cp312-*", "cp313-*", "cp314-*"]
+
+# Skip 32-bit builds and musl variants
+skip = ["*-win32", "*-manylinux_i686", "*-musllinux_*"]
+
+# Test the wheels after building
+test-requires = ["pytest"]
+test-command = "pytest {project}/tests"
+
+# Platform-specific settings
+[tool.cibuildwheel.macos]
+archs = ["x86_64", "arm64"]  # Intel and Apple Silicon
+
+[tool.cibuildwheel.linux]
+archs = ["x86_64"]
+
+[tool.cibuildwheel.windows]
+archs = ["AMD64"]
