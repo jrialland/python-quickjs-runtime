@@ -1,0 +1,11 @@
+# Include the quickjs submodule directory and all its contents
+recursive-include quickjs *
+
+# Include C source files
+recursive-include c-sources *.c *.h
+
+# Include configuration and build files
+include configure.py
+include pyproject.toml
+include README.md
+include LICENSE
