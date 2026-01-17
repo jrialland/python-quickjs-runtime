@@ -1,9 +1,10 @@
 import sys
-from _quickjs import Runtime as _Runtime
-
 from abc import ABC, abstractmethod
 from typing import override
 
+from _quickjs import Runtime as _Runtime
+
+__version__ = "0.1.2"
 
 class IRuntime(ABC):
 
