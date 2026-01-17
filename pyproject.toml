@@ -4,7 +4,7 @@ build-backend = "zigcc_build"
 
 [project]
 name = "quickjs-runtime"
-version = "0.1.2"
+version = "0.1.7"
 description = "Python bindings for QuickJS"
 readme = "README.md"
 requires-python = ">=3.8"

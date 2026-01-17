@@ -4,7 +4,7 @@ from typing import override
 
 from _quickjs import Runtime as _Runtime
 
-__version__ = "0.1.2"
+__version__ = "0.1.7"
 
 class IRuntime(ABC):
 
