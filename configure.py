@@ -29,6 +29,10 @@ def configure(config: ZigCcConfig):
     
     # Use wrapper for quickjs.c to ensure stddef.h is included
     config["sources"].append("c-sources/quickjs_wrapper.c")
+
+    # Add compatibility layer for older Linux systems
+    if os.name == "posix" and os.uname().sysname == "Linux":
+        config["sources"].append("c-sources/compat.c")
     
     for src in qjs_sources:
         config["sources"].append(os.path.join(qjs_root, src))
@@ -45,3 +49,4 @@ def configure(config: ZigCcConfig):
     config["defines"].append("_GNU_SOURCE")
     config["defines"].append('CONFIG_VERSION="2025-09-13"')
     config["defines"].append("CONFIG_BIGNUM")
+ 
