@@ -17,9 +17,15 @@ This library allows you to execute JavaScript code within your Python applicatio
 
 ## Installation
 
-You can install the package from the source:
+Building from source requires the `quickjs` git submodule, so clone it with
+submodules (or initialize it in an existing checkout):
 
 ```bash
+git clone --recurse-submodules https://github.com/jrialland/python-quickjs-runtime.git
+# or, in an existing checkout:
+git submodule update --init --recursive
+
+cd python-quickjs-runtime
 pip install .
 ```
 

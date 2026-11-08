@@ -40,6 +40,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+      with:
+        submodules: recursive
     
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -73,8 +75,16 @@ jobs:
         python -m pip install --upgrade pip
         pip install build
     
+    - name: Verify QuickJS submodule is present
+      run: |
+        test -f quickjs/quickjs.c || { echo "::error::quickjs submodule is missing; sdist would be broken"; exit 1; }
+    
     - name: Build source distribution
       run: python -m build --sdist
+    
+    - name: Verify sdist contains QuickJS sources
+      run: |
+        tar -tzf dist/*.tar.gz | grep -q '/quickjs/quickjs.c$' || { echo "::error::sdist does not contain quickjs/quickjs.c"; exit 1; }
     
     - name: Upload sdist
       uses: actions/upload-artifact@v4

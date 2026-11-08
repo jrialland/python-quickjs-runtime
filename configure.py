@@ -13,10 +13,43 @@ class ZigCcConfig(TypedDict):
     libraries: List[str]
     module_name: str
 
+QJS_ROOT = "quickjs"
+
+REQUIRED_QJS_FILES = [
+    "quickjs.c",
+    "quickjs.h",
+    "libregexp.c",
+    "libunicode.c",
+    "cutils.c",
+    "quickjs-libc.c",
+    "dtoa.c",
+    "VERSION",
+]
+
+def _check_qjs_sources():
+    missing = [
+        name for name in REQUIRED_QJS_FILES
+        if not os.path.isfile(os.path.join(QJS_ROOT, name))
+    ]
+    if missing:
+        raise RuntimeError(
+            "QuickJS sources are missing from '{}': {}. "
+            "The 'quickjs' git submodule is probably not initialized. Run:\n"
+            "    git submodule update --init --recursive".format(
+                QJS_ROOT, ", ".join(missing)
+            )
+        )
+
+def _qjs_version():
+    with open(os.path.join(QJS_ROOT, "VERSION"), encoding="utf-8") as f:
+        return f.read().strip()
+
 def configure(config: ZigCcConfig):
     print("Configuring QuickJS build...")
-    
-    qjs_root = "quickjs"
+
+    _check_qjs_sources()
+
+    qjs_root = QJS_ROOT
     
     # Core QuickJS sources
     qjs_sources = [
@@ -43,6 +76,5 @@ def configure(config: ZigCcConfig):
     
     # Standard QuickJS defines
     config["defines"].append("_GNU_SOURCE")
-    config["defines"].append('CONFIG_VERSION="2025-09-13"')
+    config["defines"].append('CONFIG_VERSION="{}"'.format(_qjs_version()))
     config["defines"].append("CONFIG_BIGNUM")
- 
